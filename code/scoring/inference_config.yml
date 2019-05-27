@@ -1,0 +1,10 @@
+{
+    "entryScript": "score.py",
+    "runtime": "python",
+    "condaFile": "./data/env.yml",
+    "extraDockerfileSteps": null,
+    "dependencies": null,
+    "enableGpu": false,
+    "baseImage": null,
+    "baseImageRegistry": null
+}
