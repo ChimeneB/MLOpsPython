@@ -1,6 +1,6 @@
 {
     "subscription_id": "<>",
-    "resource_group": "DevOps_AzureML_Demo",
-    "workspace_name": "AzureML_Demo_ws",
-    "location": "southcentralus"
+    "resource_group": "skillup",
+    "workspace_name": "ai-devops-aml",
+    "location": "East US"
 }
