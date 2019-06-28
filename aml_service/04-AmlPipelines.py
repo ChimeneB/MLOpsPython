@@ -34,8 +34,6 @@ from azureml.pipeline.steps import PythonScriptStep
 from azureml.pipeline.core import PublishedPipeline
 from azureml.pipeline.core.graph import PipelineParameter
 from azureml.core.compute import ComputeTarget
-
-# from azureml.widgets import RunDetails
 from azureml.core.authentication import AzureCliAuthentication
 
 print("Pipeline SDK-specific imports completed")
@@ -50,32 +48,36 @@ parser.add_argument(
     choices=["pipeline-test", "publish"],
     help="Determines if pipeline needs to run on small data set \
                                         or pipeline needs to be republished",
-    #default="pipeline-test",
 )
+
+parser.add_argument('--config_file', help='the name of your config file', default='config.json')
+parser.add_argument('--config_folder', help='The relative path to your config folder', default='./aml_config')
+parser.add_argument('-e', '--experiment_name', help='The name of your AML Experiment')
+parser.add_argument('--aml_cluster', help='The name of your AML Compute Cluster')
+parser.add_argument('--datastore_name', help='The name of your Datastore')
+parser.add_argument('--pipeline_name', help='AML Pipeline name')
+parser.add_argument('-m', '--model_name', help='The name of your model')
+parser.add_argument('--build_id', help='The Azure Pipelines Build ID')
 
 args = parser.parse_args()
 
+cfg = os.path.join(args.config_folder, args.config_file)
 
 # Get workspace
-ws = Workspace.from_config(path="aml_config/config.json", auth=cli_auth)
-def_blob_store = Datastore(ws, "workspaceblobstore")
+ws = Workspace.from_config(path=cfg, auth=cli_auth)
+def_blob_store = Datastore(ws, args.datastore_name)
 
-# Get AML Compute name and Experiment Name
-with open("aml_config/security_config.json") as f:
-    config = json.load(f)
-
-experiment_name = config["experiment_name"]
-aml_cluster_name = config["aml_cluster_name"]
-aml_pipeline_name = "training-pipeline"
-#model_name = config["model_name"]
-model_name = PipelineParameter(name="model_name", default_value="sklearn_regression_model.pkl")
+experiment_name = args.experiment_name
+aml_cluster_name = args.aml_cluster
+aml_pipeline_name = args.pipeline_name
+model_name = PipelineParameter(name="model_name", default_value=args.model_name)
 
 source_directory = "code"
 
 # Run Config
 # Declare packages dependencies required in the pipeline (these can also be expressed as a YML file)
 # cd = CondaDependencies.create(pip_packages=["azureml-defaults", 'tensorflow==1.8.0'])
-cd = CondaDependencies("aml_config/conda_dependencies.yml")
+cd = CondaDependencies(os.path.join(args.config_folder, 'conda_dependencies.yml'))
 
 run_config = RunConfiguration(conda_dependencies=cd)
 aml_compute = ws.compute_targets[aml_cluster_name]
@@ -95,8 +97,8 @@ train = PythonScriptStep(
     compute_target=aml_compute,
     source_directory=source_directory,
     arguments=[
-        "--config_suffix", config_suffix, 
-        "--json_config", jsonconfigs, 
+        "--config_suffix", config_suffix,
+        "--json_config", jsonconfigs,
         "--model_name", model_name,
         ],
     runconfig=run_config,
@@ -112,7 +114,7 @@ evaluate = PythonScriptStep(
     compute_target=aml_compute,
     source_directory=source_directory,
     arguments=[
-                "--config_suffix", config_suffix, 
+                "--config_suffix", config_suffix,
                 "--json_config", jsonconfigs,
                 ],
     runconfig=run_config,
@@ -128,7 +130,7 @@ register_model = PythonScriptStep(
     compute_target=aml_compute,
     source_directory=source_directory,
     arguments=[
-        "--config_suffix", config_suffix, 
+        "--config_suffix", config_suffix,
         "--json_config", jsonconfigs,
         "--model_name", model_name,
         ],

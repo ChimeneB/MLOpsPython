@@ -23,20 +23,28 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE CODE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
-from azureml.core import Workspace
-import os, json, sys
 import azureml.core
+from azureml.core import Workspace
+from azureml.exceptions._azureml_exception import ProjectSystemException
 from azureml.core.authentication import AzureCliAuthentication
+import os, json, sys
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-w', '--workspace_name', help='The name of the Azure ML Workspace')
+parser.add_argument('-g', '--resource_group', help='The name of the Azure Resource Group')
+parser.add_argument('-s', '--subscription_id', help='The Azure Subscription ID containing the Azure ML Workspace')
+parser.add_argument('-l', '--location', help='The location of the Azure Resource Group')
+
+args = parser.parse_args()
 
 print("SDK Version:", azureml.core.VERSION)
-# print('current dir is ' +os.curdir)
-with open("aml_config/config.json") as f:
-    config = json.load(f)
 
-workspace_name = config["workspace_name"]
-resource_group = config["resource_group"]
-subscription_id = config["subscription_id"]
-location = config["location"]
+workspace_name = args.workspace_name
+resource_group = args.resource_group
+subscription_id = args.subscription_id
+location = args.location
 
 cli_auth = AzureCliAuthentication()
 
@@ -48,7 +56,7 @@ try:
         auth=cli_auth,
     )
 
-except:
+except ProjectSystemException:
     # this call might take a minute or two.
     print("Creating new workspace")
     ws = Workspace.create(

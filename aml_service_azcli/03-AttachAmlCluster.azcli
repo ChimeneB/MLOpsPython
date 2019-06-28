@@ -1,0 +1,2 @@
+# Create AML Compute instance
+az ml computetarget create amlcompute --name $(amlComputeName) --vm-size $(amlComputeVMSize) --max-nodes $(amlComputeMaxNodes) --vm-priority $(amlComputeVMPriority)

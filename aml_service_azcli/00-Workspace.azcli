@@ -1,0 +1,5 @@
+#Create a workspace. If it already exists, the command will respond accordingly
+az ml workspace create -w $(workspaceName) -g $(resourceGroup)
+
+#Set the workspace as default
+az ml folder attach -w $(workspaceName) -g $(resourceGroup) --path $(configPath)
