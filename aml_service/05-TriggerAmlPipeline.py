@@ -24,34 +24,45 @@ ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE CODE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
-import os, json, requests, datetime, sys
-import argparse
+import os
+from azureml.core import Workspace
 from azureml.core.authentication import AzureCliAuthentication
-
-try:
-    with open("aml_config/pipeline_config.json") as f:
-        config = json.load(f)
-    with open("aml_config/security_config.json") as f:
-        security_config = json.load(f)
-except:
-    print("No pipeline config found")
-    sys.exit(0)
+from azureml.pipeline.core import PublishedPipeline
 
 # Run a published pipeline
 cli_auth = AzureCliAuthentication()
 aad_token = cli_auth.get_authentication_header()
-rest_endpoint1 = config["rest_endpoint"]
-experiment_name = config["experiment_name"]
-model_name = security_config["model_name"]
+pipeline_name = os.environ.get('PIPELINE_NAME')
+experiment_name = os.environ.get('EXPERIMENT_NAME')
+model_name = os.environ.get('MODEL_NAME')
 
-print(rest_endpoint1)
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER")
+config_file = os.environ.get("PIPELINE_CONFIG_FILE")
 
-response = requests.post(
-    rest_endpoint1, headers=aad_token, 
-    json={"ExperimentName": experiment_name,
-    "ParameterAssignments": {"model_name":model_name}}
-)
+cfg = os.path.join(config_folder, config_file)
 
-run_id = response.json()["Id"]
-print(run_id)
-print("Pipeline run initiated")
+# Get workspace
+ws = Workspace.from_config(path=cfg, auth=cli_auth)
+
+all_pipelines = PublishedPipeline.list(workspace=ws)
+# Get the pipeline with the configured name
+# (in case multiple pipelines are published in workspace)
+
+for p in all_pipelines:
+    if(p.status == 'Active' and p.name == pipeline_name):
+        pipeline = p
+
+if pipeline is not None:
+    print(pipeline)
+
+    response = pipeline.submit(
+        workspace=ws, 
+        experiment_name=experiment_name, 
+        pipeline_parameters=None
+        )
+
+    run_id = response.id
+    print(run_id)
+    print("Pipeline run initiated")
+else:
+    raise ValueError('No Pipeline with name {} found'.format(pipeline_name))

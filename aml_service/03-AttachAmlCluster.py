@@ -23,22 +23,18 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE CODE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
-
+# TODO: Convert to AZ ML CLI
 from azureml.core import Workspace
 from azureml.core.compute import ComputeTarget, AmlCompute
 from azureml.core.compute_target import ComputeTargetException
 from azureml.core.authentication import AzureCliAuthentication
-import os, json
+import os
 
 cli_auth = AzureCliAuthentication()
 # Get workspace
 ws = Workspace.from_config(auth=cli_auth)
 
-# Read the New VM Config
-with open("aml_config/security_config.json") as f:
-    config = json.load(f)
-
-aml_cluster_name = config["aml_cluster_name"]
+aml_cluster_name = os.environ.get("AML_CLUSTER_NAME", None)
 
 # un-comment the below lines if you want to put AML Compute under Vnet. Also update /aml_config/security_config.json
 # vnet_resourcegroup_name = config['vnet_resourcegroup_name']
@@ -51,10 +47,10 @@ try:
     print("Found existing cluster, use it.")
 except ComputeTargetException:
     compute_config = AmlCompute.provisioning_configuration(
-        vm_size="STANDARD_D2_V2",
-        vm_priority="dedicated",
-        min_nodes=1,
-        max_nodes=3,
+        vm_size=os.environ.get("AML_CLUSTER_VM_SIZE", None),
+        vm_priority=os.environ.get("AML_CLUSTER_PRIORITY", 'lowpriority'),
+        min_nodes=os.environ.get("AML_CLUSTER_MIN_NODES", 1),
+        max_nodes=os.environ.get("AML_CLUSTER_MAX_NODES", 3),
         idle_seconds_before_scaledown="300",
         #    #Uncomment the below lines for VNet support
         #    vnet_resourcegroup_name=vnet_resourcegroup_name,

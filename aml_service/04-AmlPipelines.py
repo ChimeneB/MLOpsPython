@@ -24,60 +24,54 @@ ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE CODE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
 
-import os, json, requests, datetime
+import os
+import datetime
 import argparse
 from azureml.core import Workspace, Experiment, Datastore
 from azureml.core.runconfig import RunConfiguration, CondaDependencies
-from azureml.data.data_reference import DataReference
-from azureml.pipeline.core import Pipeline, PipelineData, StepSequence
+from azureml.pipeline.core import Pipeline, PipelineData
 from azureml.pipeline.steps import PythonScriptStep
-from azureml.pipeline.core import PublishedPipeline
 from azureml.pipeline.core.graph import PipelineParameter
-from azureml.core.compute import ComputeTarget
 from azureml.core.authentication import AzureCliAuthentication
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument(
+    '--pipeline_action',
+    help='Defines whether this is a test or publish run',
+    )
+
+args = parser.parse_args()
 
 print("Pipeline SDK-specific imports completed")
 
 cli_auth = AzureCliAuthentication()
 
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
 
-parser = argparse.ArgumentParser("Pipeline")
-parser.add_argument(
-    "--pipeline_action",
-    type=str,
-    choices=["pipeline-test", "publish"],
-    help="Determines if pipeline needs to run on small data set \
-                                        or pipeline needs to be republished",
-)
-
-parser.add_argument('--config_file', help='the name of your config file', default='config.json')
-parser.add_argument('--config_folder', help='The relative path to your config folder', default='./aml_config')
-parser.add_argument('-e', '--experiment_name', help='The name of your AML Experiment')
-parser.add_argument('--aml_cluster', help='The name of your AML Compute Cluster')
-parser.add_argument('--datastore_name', help='The name of your Datastore')
-parser.add_argument('--pipeline_name', help='AML Pipeline name')
-parser.add_argument('-m', '--model_name', help='The name of your model')
-parser.add_argument('--build_id', help='The Azure Pipelines Build ID')
-
-args = parser.parse_args()
-
-cfg = os.path.join(args.config_folder, args.config_file)
+cfg = os.path.join(config_folder, config_file)
 
 # Get workspace
 ws = Workspace.from_config(path=cfg, auth=cli_auth)
-def_blob_store = Datastore(ws, args.datastore_name)
+def_blob_store = Datastore(ws, os.environ.get("DATASTORE_NAME"))
 
-experiment_name = args.experiment_name
-aml_cluster_name = args.aml_cluster
-aml_pipeline_name = args.pipeline_name
-model_name = PipelineParameter(name="model_name", default_value=args.model_name)
+experiment_name = os.environ.get("EXPERIMENT_NAME")
+aml_cluster_name = os.environ.get("AML_CLUSTER_NAME")
+aml_pipeline_name = os.environ.get("PIPELINE_NAME")
+model_name = PipelineParameter(
+    name="model_name",
+    default_value=os.environ.get("MODEL_NAME")
+    )
 
-source_directory = "code"
+source_directory = os.environ.get("SOURCE_FOLDER", "code")
 
 # Run Config
-# Declare packages dependencies required in the pipeline (these can also be expressed as a YML file)
-# cd = CondaDependencies.create(pip_packages=["azureml-defaults", 'tensorflow==1.8.0'])
-cd = CondaDependencies(os.path.join(args.config_folder, 'conda_dependencies.yml'))
+# Declare packages dependencies required in the pipeline
+#       (these can also be expressed manually)
+# cd = CondaDependencies.create(
+#           pip_packages=["azureml-defaults", 'tensorflow==1.8.0'])
+cd = CondaDependencies(os.path.join(config_folder, 'conda_dependencies.yml'))
 
 run_config = RunConfiguration(conda_dependencies=cd)
 aml_compute = ws.compute_targets[aml_cluster_name]
@@ -90,6 +84,7 @@ jsonconfigs = PipelineData("jsonconfigs", datastore=def_blob_store)
 config_suffix = datetime.datetime.now().strftime("%Y%m%d%H")
 print("PipelineData object created")
 
+# TODO: update training script to be more generic
 # Create python script step to run the training/scoring main script
 train = PythonScriptStep(
     name="Train New Model",
@@ -108,6 +103,7 @@ train = PythonScriptStep(
 )
 print("Step Train created")
 
+# TODO: update evaluation script to be more generic
 evaluate = PythonScriptStep(
     name="Evaluate New Model with Prod Model",
     script_name="evaluate/evaluate_model.py",
@@ -141,24 +137,9 @@ register_model = PythonScriptStep(
 )
 print("Step register model created")
 
-# Package model step is moved to Azure DevOps Release Pipeline
-# package_model = PythonScriptStep(
-#     name="Package Model as Scoring Image",
-#     script_name="scoring/create_scoring_image.py",
-#     compute_target=aml_compute,
-#     source_directory=source_directory,
-#     arguments=["--config_suffix", config_suffix, "--json_config", jsonconfigs],
-#     runconfig=run_config,
-#     inputs=[jsonconfigs],
-#     # outputs=[jsonconfigs],
-#     allow_reuse=False,
-# )
-# print("Packed the model into a Scoring Image")
-
 # Create Steps dependency such that they run in sequence
 evaluate.run_after(train)
 register_model.run_after(evaluate)
-#package_model.run_after(register_model)
 
 steps = [register_model]
 
@@ -181,9 +162,6 @@ if args.pipeline_action == "pipeline-test":
     pipeline_run1.wait_for_completion(show_output=True)
 
 
-# RunDetails(pipeline_run1).show()
-
-
 # Define pipeline parameters
 # run_env = PipelineParameter(
 #   name="dev_flag",
@@ -197,17 +175,11 @@ if args.pipeline_action == "pipeline-test":
 # Publish Pipeline
 if args.pipeline_action == "publish":
     published_pipeline1 = pipeline1.publish(
-        name=aml_pipeline_name, description="Model training/retraining pipeline"
+        name=aml_pipeline_name, 
+        description="Model training/retraining pipeline"
     )
     print(
         "Pipeline is published as rest_endpoint {} ".format(
             published_pipeline1.endpoint
         )
     )
-    # write published pipeline details as build artifact
-    pipeline_config = {}
-    pipeline_config["pipeline_name"] = published_pipeline1.name
-    pipeline_config["rest_endpoint"] = published_pipeline1.endpoint
-    pipeline_config["experiment_name"] = "published-pipeline-exp"  # experiment_name
-    with open("aml_config/pipeline_config.json", "w") as outfile:
-        json.dump(pipeline_config, outfile)

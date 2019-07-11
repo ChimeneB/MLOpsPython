@@ -23,14 +23,14 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THE SOFTWARE CODE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 """
-## Create a new Conda environment on local and train the model
-## System-managed environment
+# Create a new Conda environment on local and train the model
+# System-managed environment
 
-from azureml.core.conda_dependencies import CondaDependencies
 from azureml.core.runconfig import RunConfiguration
 from azureml.core import Workspace
 from azureml.core import Experiment
 from azureml.core import ScriptRunConfig
+import os
 
 from azureml.core.authentication import AzureCliAuthentication
 
@@ -40,7 +40,7 @@ cli_auth = AzureCliAuthentication()
 ws = Workspace.from_config(auth=cli_auth)
 
 # Attach Experiment
-experiment_name = "devops-ai-demo"
+experiment_name = os.environ.get("EXPERIMENT_NAME")
 exp = Experiment(workspace=ws, name=experiment_name)
 print(exp.name, exp.workspace.name, sep="\n")
 
@@ -59,9 +59,9 @@ print("Submitting an experiment to new conda virtual env")
 src = ScriptRunConfig(
     source_directory="./code",
     script="training/train.py",
-    run_config=run_config_user_managed,
+    run_config=run_config_system_managed,
 )
-run = exp.submit(src)
+run = exp.submit(src, tags={'Build': os.environ.get('Build.BuildId')})
 
 # Shows output of the run on stdout.
 run.wait_for_completion(show_output=True, wait_post_processing=True)
@@ -73,10 +73,3 @@ if run.get_status() == "Failed":
             run.get_status(), run.get_details_with_logs()
         )
     )
-
-# Writing the run id to /aml_config/run_id.json
-run_id = {}
-run_id["run_id"] = run.id
-run_id["experiment_name"] = run.experiment.name
-with open("aml_config/run_id.json", "w") as outfile:
-    json.dump(run_id, outfile)

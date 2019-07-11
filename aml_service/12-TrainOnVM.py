@@ -36,15 +36,11 @@ cli_auth = AzureCliAuthentication()
 # Get workspace
 ws = Workspace.from_config(auth=cli_auth)
 
-
-# Read the New VM Config
-with open("aml_config/security_config.json") as f:
-    config = json.load(f)
-remote_vm_name = config["remote_vm_name"]
+remote_vm_name = os.environ.get("REMOTE_VM_NAME")
 
 
 # Attach Experiment
-experiment_name = "devops-ai-demo"
+experiment_name = os.environ.get("EXPERIMENT_NAME")
 exp = Experiment(workspace=ws, name=experiment_name)
 print(exp.name, exp.workspace.name, sep="\n")
 
@@ -57,9 +53,11 @@ run_config.environment.python.user_managed_dependencies = True
 
 
 src = ScriptRunConfig(
-    source_directory="./code", script="training/train.py", run_config=run_config
+    source_directory="./code",
+    script="training/train.py",
+    run_config=run_config
 )
-run = exp.submit(src)
+run = exp.submit(src, tags={'Build': os.environ.get('Build.BuildId')})
 
 # Shows output of the run on stdout.
 run.wait_for_completion(show_output=True, wait_post_processing=True)
@@ -71,10 +69,3 @@ if run.get_status() == "Failed":
             run.get_status(), run.get_details_with_logs()
         )
     )
-
-# Writing the run id to /aml_config/run_id.json
-run_id = {}
-run_id["run_id"] = run.id
-run_id["experiment_name"] = run.experiment.name
-with open("aml_config/run_id.json", "w") as outfile:
-    json.dump(run_id, outfile)

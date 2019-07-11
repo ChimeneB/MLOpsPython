@@ -31,10 +31,11 @@ from azureml.core.authentication import AzureCliAuthentication
 cli_auth = AzureCliAuthentication()
 
 
+#TODO: investigate need for this script - tarockey
+
 def getExperiment():
     ws = Workspace.from_config(auth=cli_auth)
-    script_folder = "."
-    experiment_name = "devops-ai-demo"
+    experiment_name = os.environ.get("EXPERIMENT_NAME", None)
     exp = Experiment(workspace=ws, name=experiment_name)
     print(exp.name, exp.workspace.name, sep="\n")
     return exp

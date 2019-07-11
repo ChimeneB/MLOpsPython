@@ -28,23 +28,13 @@ from azureml.core import Workspace
 from azureml.exceptions._azureml_exception import ProjectSystemException
 from azureml.core.authentication import AzureCliAuthentication
 import os, json, sys
-import argparse
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('-w', '--workspace_name', help='The name of the Azure ML Workspace')
-parser.add_argument('-g', '--resource_group', help='The name of the Azure Resource Group')
-parser.add_argument('-s', '--subscription_id', help='The Azure Subscription ID containing the Azure ML Workspace')
-parser.add_argument('-l', '--location', help='The location of the Azure Resource Group')
-
-args = parser.parse_args()
 
 print("SDK Version:", azureml.core.VERSION)
 
-workspace_name = args.workspace_name
-resource_group = args.resource_group
-subscription_id = args.subscription_id
-location = args.location
+workspace_name = os.environ.get("WORKSPACE_NAME", None)
+resource_group = os.environ.get("RESOURCE_GROUP", None)
+subscription_id = os.environ.get("SUBSCRIPTION_ID", None)
+location = os.environ.get("LOCATION", None)
 
 cli_auth = AzureCliAuthentication()
 

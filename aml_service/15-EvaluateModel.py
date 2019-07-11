@@ -40,16 +40,15 @@ ws = Workspace.from_config(auth=cli_auth)
 
 # Add golden data set on which all the model performance can be evaluated
 
-# Get the latest run_id
-with open("aml_config/run_id.json") as f:
-    config = json.load(f)
-
-new_model_run_id = config["run_id"]
-experiment_name = config["experiment_name"]
+experiment_name = os.environ.get('EXPERIMENT_NAME', None)
 exp = Experiment(workspace=ws, name=experiment_name)
 
+# Get the id of the latest run associated with this AzDO build
+build_run = next(exp.get_runs(tags={'Build': os.environ.get('Build.BuildId')}))
+new_model_run_id = build_run.id
 
 try:
+    # TODO: Change the way production model is found to use workspace
     # Get most recently registered model, we assume that is the model in production. Download this model and compare it with the recently trained model by running test with same data set.
     model_list = Model.list(ws)
     production_model = next(
