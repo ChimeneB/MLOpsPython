@@ -45,8 +45,8 @@ except:
     # raise Exception('No new model to register as production model perform better')
     sys.exit(0)
 
-image_name = config["image_name"]
-image_version = config["image_version"]
+image_name = os.environ.get('IMAGE_NAME')
+image_version = os.environ.get('IMAGE_VERSION')
 
 images = Image.list(workspace=ws)
 image, = (m for m in images if m.version == image_version and m.name == image_name)
@@ -63,11 +63,11 @@ print(
 try:
     with open("aml_config/aks_webservice.json") as f:
         config = json.load(f)
-    aks_name = config["aks_name"]
-    aks_service_name = config["aks_service_name"]
+    aks_name = os.environ.get('AKS_COMPUTE_NAME')
+    aks_service_name = os.environ.get('AKS_SERVICE_NAME')
     compute_list = ws.compute_targets()
     aks_target, = (c for c in compute_list if c.name == aks_name)
-    service = Webservice(name=aks_service_name, workspace=ws)
+    service = AksWebservice(name=aks_service_name, workspace=ws)
     print(
         "Updating AKS service {} with image: {}".format(
             aks_service_name, image.image_location
@@ -75,10 +75,12 @@ try:
     )
     service.update(image=image)
 except:
-    aks_name = "aks" + datetime.datetime.now().strftime("%m%d%H")
-    aks_service_name = "akswebservice" + datetime.datetime.now().strftime("%m%d%H")
+    aks_name = os.environ.get('AKS_COMPUTE_NAME')
+    aks_service_name = os.environ.get('AKS_SERVICE_NAME')
     prov_config = AksCompute.provisioning_configuration(
-        agent_count=6, vm_size="Standard_F4s", location="eastus"
+        agent_count=os.environ.get('AKS_AGENT_COUNT'), 
+        vm_size=os.environ.get('AKS_SIZE'), 
+        location=os.environ.get('AKS_LOCATION')
     )
     print(
         "No AKS found in aks_webservice.json. Creating new Aks: {} and AKS Webservice: {}".format(

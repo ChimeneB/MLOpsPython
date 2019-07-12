@@ -45,9 +45,9 @@ except:
     # raise Exception('No new model to register as production model perform better')
     sys.exit(0)
 
-service_name = config["aci_name"]
+service_name = os.environ.get('ACI_SERVICE_NAME')
 # Get the hosted web service
-service = Webservice(name=service_name, workspace=ws)
+service = AciWebservice(name=service_name, workspace=ws)
 
 # Input for Model with all features
 input_j = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]]

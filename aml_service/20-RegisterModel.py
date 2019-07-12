@@ -33,9 +33,12 @@ from azureml.core.runconfig import RunConfiguration
 from azureml.core.authentication import AzureCliAuthentication
 
 cli_auth = AzureCliAuthentication()
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
+cfg = os.path.join(config_folder, config_file)
 
 # Get workspace
-ws = Workspace.from_config(auth=cli_auth)
+ws = Workspace.from_config(path=cfg, auth=cli_auth)
 
 # Get the latest evaluation result
 try:
@@ -49,7 +52,7 @@ except:
     sys.exit(0)
 
 run_id = config["run_id"]
-experiment_name = config["experiment_name"]
+experiment_name = os.environ.get('EXPERIMENT_NAME')
 exp = Experiment(workspace=ws, name=experiment_name)
 
 run = Run(experiment=exp, run_id=run_id)
@@ -60,7 +63,7 @@ model_local_dir = "model"
 os.makedirs(model_local_dir, exist_ok=True)
 
 # Download Model to Project root directory
-model_name = "sklearn_regression_model.pkl"
+model_name = os.environ.get('MODEL_NAME')
 run.download_file(
     name="./outputs/" + model_name, output_file_path="./model/" + model_name
 )
@@ -82,11 +85,3 @@ print(
 
 # Remove the evaluate.json as we no longer need it
 # os.remove("aml_config/evaluate.json")
-
-# Writing the registered model details to /aml_config/model.json
-model_json = {}
-model_json["model_name"] = model.name
-model_json["model_version"] = model.version
-model_json["run_id"] = run_id
-with open("aml_config/model.json", "w") as outfile:
-    json.dump(model_json, outfile)

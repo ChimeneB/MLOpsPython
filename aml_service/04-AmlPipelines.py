@@ -49,7 +49,6 @@ cli_auth = AzureCliAuthentication()
 
 config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
 config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
-
 cfg = os.path.join(config_folder, config_file)
 
 # Get workspace

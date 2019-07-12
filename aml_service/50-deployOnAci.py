@@ -44,8 +44,8 @@ except:
     sys.exit(0)
 
 
-image_name = config["image_name"]
-image_version = config["image_version"]
+image_name = os.environ.get('IMAGE_NAME')
+image_version = os.environ.get('IMAGE_VERSION')
 
 images = Image.list(workspace=ws)
 image, = (m for m in images if m.version == image_version and m.name == image_name)
@@ -60,13 +60,13 @@ print(
 
 
 aciconfig = AciWebservice.deploy_configuration(
-    cpu_cores=1,
-    memory_gb=1,
-    tags={"area": "diabetes", "type": "regression"},
+    cpu_cores=os.environ.get('ACI_CPU_CORES'),
+    memory_gb=os.environ.get('ACI_MEMORY_GB'),
+    tags={"build": os.environ.get("Build.BuildId")},
     description="A sample description",
 )
 
-aci_service_name = "aciwebservice" + datetime.datetime.now().strftime("%m%d%H")
+aci_service_name = os.environ.get('ACI_SERVICE_NAME')
 
 service = Webservice.deploy_from_image(
     deployment_config=aciconfig, image=image, name=aci_service_name, workspace=ws

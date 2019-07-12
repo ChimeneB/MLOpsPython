@@ -32,7 +32,11 @@ from azureml.core.authentication import AzureCliAuthentication
 cli_auth = AzureCliAuthentication()
 
 # Get workspace
-ws = Workspace.from_config(auth=cli_auth)
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
+cfg = os.path.join(config_folder, config_file)
+
+ws = Workspace.from_config(auth=cli_auth, )
 
 # Get the latest model details
 
@@ -56,27 +60,20 @@ ws = Workspace.from_config(auth=cli_auth)
 #     )
 # )
 
-try:
-    with open("aml_config/security_config.json") as f:
-        security_config = json.load(f)
-except:
-    print("No Security Config found")
-    sys.exit(0)
-
 # Run a published pipeline
 #model_name = "sklearn_regression_model.pkl"
-model_name = security_config["model_name"]
+model_name = os.environ.get('MODEL_NAME')
 model = Model(ws, name=model_name)
 
 os.chdir("./code/scoring")
-image_name = "diabetes-model-score"
+image_name = os.environ.get('IMAGE_NAME')
 
 image_config = ContainerImage.image_configuration(
     execution_script="score.py",
     runtime="python",
     conda_file="conda_dependencies.yml",
-    description="Image with ridge regression model",
-    tags={"area": "diabetes", "type": "regression"},
+    description="Image build during build {}".format(os.environ.get('Build.BuildId')),
+    tags={"build": os.environ.get('Build.BuildId')},
 )
 
 image = Image.create(

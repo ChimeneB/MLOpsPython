@@ -38,7 +38,6 @@ model_name = os.environ.get('MODEL_NAME')
 
 config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER")
 config_file = os.environ.get("PIPELINE_CONFIG_FILE")
-
 cfg = os.path.join(config_folder, config_file)
 
 # Get workspace

@@ -28,12 +28,16 @@ from azureml.core.runconfig import RunConfiguration
 from azureml.core import Workspace
 from azureml.core import Experiment
 from azureml.core import ScriptRunConfig
-import json
+import os
 from azureml.core.authentication import AzureCliAuthentication
 
 cli_auth = AzureCliAuthentication()
 
 # Get workspace
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
+
+cfg = os.path.join(config_folder, config_file)
 ws = Workspace.from_config(auth=cli_auth)
 
 # Attach Experiment
@@ -63,11 +67,3 @@ if run.get_status() == "Failed":
             run.get_status(), run.get_details_with_logs()
         )
     )
-
-# Writing the run id to /aml_config/run_id.json
-
-run_id = {}
-run_id["run_id"] = run.id
-run_id["experiment_name"] = run.experiment.name
-with open("aml_config/run_id.json", "w") as outfile:
-    json.dump(run_id, outfile)

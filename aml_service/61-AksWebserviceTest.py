@@ -29,7 +29,7 @@ from operator import attrgetter
 from azureml.core import Workspace
 from azureml.core.model import Model
 from azureml.core.image import Image
-from azureml.core.webservice import Webservice
+from azureml.core.webservice import AksWebservice
 from azureml.core.authentication import AzureCliAuthentication
 
 cli_auth = AzureCliAuthentication()
@@ -45,9 +45,9 @@ except:
     # raise Exception('No new model to register as production model perform better')
     sys.exit(0)
 
-service_name = config["aks_service_name"]
+service_name = os.environ.get('AKS_SERVICE_NAME')
 # Get the hosted web service
-service = Webservice(workspace=ws, name=service_name)
+service = AksWebservice(workspace=ws, name=service_name)
 
 # Input for Model with all features
 input_j = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]]

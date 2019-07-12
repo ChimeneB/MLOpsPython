@@ -37,7 +37,11 @@ from azureml.core.authentication import AzureCliAuthentication
 cli_auth = AzureCliAuthentication()
 
 # Get workspace
-ws = Workspace.from_config(auth=cli_auth)
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
+cfg = os.path.join(config_folder, config_file)
+
+ws = Workspace.from_config(path=cfg, auth=cli_auth)
 
 # Attach Experiment
 experiment_name = os.environ.get("EXPERIMENT_NAME")

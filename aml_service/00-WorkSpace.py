@@ -58,5 +58,10 @@ except ProjectSystemException:
         auth=cli_auth,
     )
 
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
+
+ws.write_config(path=config_folder, file_name=config_file)
+
 # print Workspace details
 print(ws.name, ws.resource_group, ws.location, ws.subscription_id, sep="\n")

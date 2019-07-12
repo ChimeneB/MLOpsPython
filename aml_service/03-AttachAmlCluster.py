@@ -32,7 +32,13 @@ import os
 
 cli_auth = AzureCliAuthentication()
 # Get workspace
-ws = Workspace.from_config(auth=cli_auth)
+config_folder = os.environ.get("PIPELINE_CONFIG_FOLDER", './aml_config')
+config_file = os.environ.get("PIPELINE_CONFIG_FILE", 'config.json')
+
+cfg = os.path.join(config_folder, config_file)
+
+# Get workspace
+ws = Workspace.from_config(path=cfg, auth=cli_auth)
 
 aml_cluster_name = os.environ.get("AML_CLUSTER_NAME", None)
 
@@ -43,7 +49,7 @@ aml_cluster_name = os.environ.get("AML_CLUSTER_NAME", None)
 
 # Verify that cluster does not exist already
 try:
-    cpu_cluster = ComputeTarget(workspace=ws, name=aml_cluster_name)
+    cpu_cluster = AmlCompute(workspace=ws, name=aml_cluster_name)
     print("Found existing cluster, use it.")
 except ComputeTargetException:
     compute_config = AmlCompute.provisioning_configuration(
